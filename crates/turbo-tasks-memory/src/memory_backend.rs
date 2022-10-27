@@ -1,11 +1,5 @@
 use std::{
-    borrow::Cow,
-    cell::RefCell,
-    collections::HashSet,
-    future::Future,
-    pin::Pin,
-    sync::atomic::{AtomicUsize, Ordering},
-    time::Duration,
+    borrow::Cow, cell::RefCell, collections::HashSet, future::Future, pin::Pin, time::Duration,
 };
 
 use anyhow::{bail, Result};
@@ -38,7 +32,6 @@ pub struct MemoryBackend {
     backend_jobs: NoMoveVec<Job>,
     backend_job_id_factory: IdFactory<BackendJobId>,
     task_cache: FHashMap<PersistentTaskType, TaskId>,
-    scope_generation: AtomicUsize,
 }
 
 impl Default for MemoryBackend {
@@ -63,7 +56,6 @@ impl MemoryBackend {
             backend_jobs: NoMoveVec::new(),
             backend_job_id_factory: IdFactory::new(),
             task_cache: FHashMap::new(),
-            scope_generation: AtomicUsize::new(0),
         }
     }
 
@@ -183,27 +175,6 @@ impl MemoryBackend {
                 scope.state.lock().decrement_active_by(count, &mut queue)
             });
         }
-    }
-
-    pub(crate) fn acquire_scope_generation(&self) -> usize {
-        let mut generation = self.scope_generation.load(Ordering::Acquire);
-        while generation & 1 == 1 {
-            match self.scope_generation.compare_exchange_weak(
-                generation,
-                generation + 1,
-                Ordering::Release,
-                Ordering::Relaxed,
-            ) {
-                Ok(_) => return generation + 1,
-                Err(result) => generation = result,
-            }
-        }
-        generation
-    }
-
-    pub(crate) fn flag_scope_change(&self) -> usize {
-        let prev = self.scope_generation.fetch_or(1, Ordering::AcqRel);
-        prev | 1
     }
 }
 
@@ -502,7 +473,7 @@ impl Backend for MemoryBackend {
         let scope = self.initial_scope;
         self.with_scope(scope, |scope| {
             scope.increment_tasks();
-            scope.increment_unfinished_tasks();
+            scope.increment_unfinished_tasks(self);
         });
         let task = match task_type {
             TransientTaskType::Root(f) => Task::new_root(id, scope, move || f() as _),
