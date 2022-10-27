@@ -18,6 +18,9 @@ use turbo_tasks_memory::MemoryBackend;
 use turbopack_cli_utils::issue::IssueSeverityCliOption;
 use turbopack_core::issue::IssueSeverity;
 
+#[global_allocator]
+static ALLOC: turbo_malloc::TurboMalloc = turbo_malloc::TurboMalloc;
+
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
 struct Cli {

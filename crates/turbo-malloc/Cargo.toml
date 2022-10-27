@@ -9,8 +9,5 @@ autobenches = false
 [lib]
 bench = false
 
-[target.'cfg(not(target_os = "linux"))'.dependencies]
-mimalloc-rust = { version = "0.2" }
-
-[target.'cfg(all(target_os = "linux", not(target_arch = "aarch64")))'.dependencies]
-mimalloc-rust = { version = "0.2", features = ["local-dynamic-tls"] }
+[dependencies]
+mimalloc = { version = "0.1.30" }
